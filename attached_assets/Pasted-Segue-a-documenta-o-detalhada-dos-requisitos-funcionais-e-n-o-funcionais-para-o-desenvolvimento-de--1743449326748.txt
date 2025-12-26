@@ -1,0 +1,77 @@
+Segue a documentação detalhada dos requisitos funcionais e não funcionais para o desenvolvimento de um Sistema de Ponto Eletrônico Online destinado ao controle da jornada de trabalho de empregados domésticos.
+
+## 1. Introdução
+
+Este documento especifica os requisitos para um sistema de ponto eletrônico simples e intuitivo, acessível via web e dispositivos móveis. O objetivo é permitir que empregadores gerenciem completamente o ponto eletrônico de seus empregados domésticos, enquanto os empregados acompanham suas marcações de forma segura e flexível.
+
+## 2. Requisitos Funcionais
+
+Os requisitos funcionais descrevem as funcionalidades específicas que o sistema deve oferecer. citeturn0search11
+
+### 2.1. Autenticação e Autorização
+
+- **RF01**: O sistema deve fornecer uma tela inicial com campos para login (CPF) e senha.
+- **RF02**: Na tela inicial, deve haver um link para acesso administrativo protegido pela chave "admin123ponto".
+- **RF03**: No primeiro acesso administrativo, após inserir a chave, o administrador deve cadastrar seu login (CPF) e uma nova senha.
+- **RF04**: Empregados devem acessar o sistema utilizando seu CPF e uma senha.
+- **RF05**: A senha padrão para o primeiro acesso do empregado deve ser o número do CPF seguido do termo "ponto".
+- **RF06**: No primeiro acesso, o empregado deve ser obrigado a alterar sua senha.
+- **RF07**: O administrador deve ter a capacidade de redefinir a senha de qualquer empregado.
+
+### 2.2. Gestão de Empregados
+
+- **RF08**: O administrador deve poder cadastrar novos empregados com os seguintes dados:
+  - Nome completo
+  - CPF
+  - Data de início do contrato
+  - Tipo de contrato
+  - Carga horária
+- **RF09**: O administrador deve configurar os dias da semana trabalhados e os horários padrão de entrada, intervalo para almoço e saída para cada empregado.
+- **RF10**: O sistema deve calcular e exibir a carga horária semanal e mensal de acordo com o mês corrente.
+- **RF11**: O administrador deve poder inativar empregados quando necessário.
+
+### 2.3. Registro de Ponto
+
+- **RF12**: O empregado deve registrar seus horários de entrada, saída para intervalo, retorno do intervalo e saída ao final do expediente.
+- **RF13**: O sistema deve registrar automaticamente a data e hora do registro de ponto com base no horário local do dispositivo utilizado.
+- **RF14**: O sistema deve impedir registros de ponto duplicados ou fora de sequência lógica.
+
+### 2.4. Relatórios e Consultas
+
+- **RF15**: O administrador deve poder gerar relatórios mensais dos registros de ponto de cada empregado.
+- **RF16**: O sistema deve calcular o banco de horas, considerando horas extras e déficits, com base nos registros de ponto.
+- **RF17**: O empregado deve poder consultar seu próprio histórico de marcações de ponto.
+
+## 3. Requisitos Não Funcionais
+
+Os requisitos não funcionais especificam critérios que avaliam o funcionamento do sistema, como desempenho, usabilidade e segurança. citeturn0search0
+
+### 3.1. Usabilidade
+
+- **RNF01**: A interface do sistema deve ser intuitiva e responsiva, garantindo boa experiência em dispositivos móveis e desktops.
+- **RNF02**: O sistema deve fornecer mensagens de erro e sucesso claras para orientar os usuários em suas ações.
+
+### 3.2. Segurança
+
+- **RNF03**: As senhas dos usuários devem ser armazenadas de forma criptografada.
+- **RNF04**: O sistema deve implementar controle de acesso baseado em perfis, garantindo que empregados só acessem seus próprios dados.
+- **RNF05**: A comunicação entre o cliente e o servidor deve ser protegida por HTTPS.
+
+### 3.3. Desempenho
+
+- **RNF06**: O sistema deve ser capaz de suportar múltiplos acessos simultâneos sem degradação perceptível no desempenho.
+- **RNF07**: As operações de registro de ponto e consulta de histórico devem ser processadas em tempo real.
+
+### 3.4. Confiabilidade
+
+- **RNF08**: O sistema deve garantir a integridade dos dados, evitando perdas ou inconsistências nos registros de ponto.
+- **RNF09**: Deve haver mecanismos de backup periódico dos dados armazenados.
+
+### 3.5. Portabilidade
+
+- **RNF10**: O sistema deve ser compatível com os principais navegadores web modernos.
+- **RNF11**: A aplicação deve ser hospedada no GitHub Pages para o frontend e utilizar Firebase para o backend, garantindo fácil implantação e manutenção.
+
+## 4. Considerações Finais
+
+Esta documentação serve como base para o desenvolvimento do Sistema de Ponto Eletrônico Online para Empregados Domésticos, assegurando que todas as funcionalidades e características necessárias sejam implementadas conforme especificado. 

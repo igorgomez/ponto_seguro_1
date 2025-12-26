@@ -1,0 +1,156 @@
+Documentação do Sistema de Ponto Eletrônico Online para Empregados Domésticos
+1. Visão Geral
+Este sistema tem como objetivo permitir o controle da jornada de trabalho de empregados domésticos de forma simples e intuitiva. O sistema é acessível via web e dispositivos móveis, garantindo segurança e flexibilidade para empregadores e empregados.
+
+2. Tecnologias Utilizadas
+Frontend: React.js
+
+Banco de Dados & Autenticação: Supabase
+
+Hospedagem: GitHub Pages
+
+3. Funcionalidades Principais
+3.1. Acesso ao Sistema
+Tela Inicial:
+
+Campo para CPF e senha
+
+Link para acesso de administrador
+
+Login do Administrador:
+
+Primeiro acesso com a chave de acesso "admin123ponto"
+
+Cadastro do CPF e criação de nova senha
+
+Login do Empregado:
+
+Primeiro acesso com senha padrão: CPF + "ponto"
+
+Obrigação de troca de senha no primeiro acesso
+
+Acesso restrito aos próprios dados
+
+3.2. Administração (Acesso do Empregador/Administrador)
+O administrador tem controle total do sistema e pode:
+
+Gerenciar empregados
+
+Cadastrar novos empregados
+
+Editar informações de empregados
+
+Inativar ou reativar empregados
+
+Resetar senha dos empregados
+
+Definir horários de trabalho
+
+Configuração dos dias trabalhados na semana
+
+Definição de horários de entrada, intervalo e saída
+
+Gerenciar registros de ponto
+
+Acesso a todas as marcações dos empregados
+
+Geração de relatórios detalhados
+
+Cálculo da carga horária semanal e mensal
+
+Controle de banco de horas (horas extras ou saldo negativo)
+
+3.3. Funcionalidades do Empregado
+Cada empregado tem acesso somente aos seus próprios dados:
+
+Registro de Ponto
+
+Marcar entrada, intervalo e saída
+
+Consulta de Histórico
+
+Acompanhamento dos registros de ponto
+
+Verificação da carga horária acumulada
+
+Recuperação de Senha
+
+O empregador pode resetar a senha quando necessário
+
+4. Estrutura da Aplicação
+4.1. Frontend (React.js)
+Páginas do sistema:
+
+Tela de Login
+
+Dashboard do Administrador
+
+Dashboard do Empregado
+
+Cadastro e Gerenciamento de Empregados
+
+Registro e Histórico de Ponto
+
+4.2. Banco de Dados (Supabase)
+Tabelas principais:
+
+users (Usuários)
+
+id (UUID)
+
+cpf (string, único)
+
+nome (string)
+
+senha (string criptografada)
+
+tipo (admin/empregado)
+
+ativo (boolean)
+
+work_schedules (Horários de Trabalho)
+
+id (UUID)
+
+empregado_id (UUID, FK para users)
+
+dia_semana (string)
+
+hora_entrada (timestamp)
+
+hora_saida (timestamp)
+
+intervalo_inicio (timestamp)
+
+intervalo_fim (timestamp)
+
+time_records (Registros de Ponto)
+
+id (UUID)
+
+empregado_id (UUID, FK para users)
+
+data (date)
+
+hora_entrada (timestamp)
+
+hora_intervalo (timestamp)
+
+hora_retorno (timestamp)
+
+hora_saida (timestamp)
+
+5. Segurança
+Criptografia de Senhas:
+
+Utilização de bcrypt para armazenar senhas de forma segura
+
+Controle de Acesso:
+
+Apenas administradores podem gerenciar empregados
+
+Cada empregado só pode acessar seus próprios registros
+
+Reset de Senha:
+
+Apenas o administrador pode resetar a senha de um empregado
