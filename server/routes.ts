@@ -2,6 +2,7 @@ import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authMiddleware, adminMiddleware } from "./auth";
+import { firebaseAuthMiddleware } from "./firebaseAuth";
 import { 
   loginSchema, 
   adminKeySchema, 
@@ -81,6 +82,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } else {
       return res.status(200).json({ message: "Logout realizado com sucesso" });
+    }
+  });
+
+  // Firebase Login (NEW - Fase 1)
+  authRouter.post("/firebase-login", firebaseAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+      const firebaseUid = (req as any).firebaseUid;
+      const { email } = req.body;
+
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ message: "Firebase UID e email são obrigatórios" });
+      }
+
+      // Procura usuário existente por firebase_uid (quando migration for feita)
+      let user = await storage.getUserByFirebaseUid?.(firebaseUid);
+
+      if (!user) {
+        // Procura por email como fallback
+        user = await storage.getUserByEmail?.(email);
+
+        if (!user) {
+          // Cria usuário novo
+          const hashedPassword = await bcrypt.hash("firebase-auth", 10);
+          user = await storage.createUser({
+            nome: "Novo Usuário",
+            cpf: `firebase-${firebaseUid.substring(0, 11)}`, // Temporário
+            email: email || "",
+            senha: hashedPassword,
+            tipo: "empregado",
+            ativo: true,
+            primeiro_acesso: true,
+          });
+        }
+      }
+
+      // Verifica se usuário está ativo
+      if (!user.ativo) {
+        return res.status(401).json({ message: "Usuário inativo" });
+      }
+
+      // Retorna usuário sem senha
+      const { senha: _, ...userWithoutPassword } = user;
+
+      return res.status(200).json({
+        message: "Login realizado com sucesso",
+        user: userWithoutPassword,
+      });
+    } catch (error) {
+      console.error("Firebase login error:", error);
+      return res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
   

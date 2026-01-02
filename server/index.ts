@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import { initializeFirebase } from "./firebaseAdmin";
 import session from "express-session";
 
 const app = express();
@@ -50,6 +51,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Inicializa Firebase Admin SDK
+  try {
+    initializeFirebase();
+    log("Firebase Admin SDK inicializado com sucesso");
+  } catch (error) {
+    log(`Aviso: Firebase Admin SDK não inicializado. Continuando sem Firestore.`);
+    // Continua sem Firestore por enquanto (Fase 2+)
+  }
+
   // Inicializa o banco de dados
   try {
     await storage.initializeDb();

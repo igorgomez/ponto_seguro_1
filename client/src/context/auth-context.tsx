@@ -2,11 +2,19 @@ import React, { createContext, useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { User } from "@shared/schema";
+import {
+  signIn as firebaseSignIn,
+  signOut as firebaseSignOut,
+  onAuthStateChange,
+  getIdToken,
+} from "@/lib/firebase";
+import { FirebaseError } from "firebase/app";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (cpf: string, senha: string) => Promise<{ 
+  firebaseUser: any; // Firebase User object
+  login: (email: string, password: string) => Promise<{ 
     success: boolean; 
     message?: string;
     isAdmin?: boolean;
@@ -19,6 +27,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  firebaseUser: null,
   login: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -30,60 +39,103 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
-  // Check if user is logged in on initial load
+  // Observer de autenticação do Firebase
   useEffect(() => {
-    const checkAuth = async () => {
+    const unsubscribe = onAuthStateChange(async (fbUser) => {
       try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include'
-        });
+        if (fbUser) {
+          setFirebaseUser(fbUser);
+          
+          // Obtém ID token e faz refresh de dados do usuário local
+          const idToken = await getIdToken(fbUser);
+          
+          // Busca dados do usuário local
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${idToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
 
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+          } else {
+            // Token é válido mas usuário não existe no servidor
+            setUser(null);
+          }
+        } else {
+          // Usuário fez logout
+          setFirebaseUser(null);
+          setUser(null);
         }
       } catch (error) {
-        console.error("Error checking authentication:", error);
+        console.error("Error setting up auth state:", error);
+        setFirebaseUser(null);
+        setUser(null);
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
-  // Login function
-  const login = async (cpf: string, senha: string) => {
+  // Login function com Firebase
+  const login = async (email: string, password: string) => {
     try {
-      // Não use apiRequest aqui para poder tratar resposta 401 adequadamente
-      const response = await fetch('/api/auth/login', {
+      // Faz login no Firebase
+      const fbUser = await firebaseSignIn(email, password);
+      const idToken = await getIdToken(fbUser);
+
+      // Envia requisição ao servidor para sincronizar usuário local
+      const response = await fetch('/api/auth/firebase-login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cpf, senha }),
-        credentials: 'include'
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: fbUser.email,
+          uid: fbUser.uid,
+        }),
       });
       
       const data = await response.json();
       
       if (response.ok) {
         setUser(data.user);
+        setFirebaseUser(fbUser);
         return { 
           success: true,
           isAdmin: data.user.tipo === 'admin',
           firstAccess: data.user.primeiro_acesso
         };
       } else {
-        console.error("Login failed:", data.message);
         return { 
           success: false, 
-          message: data.message || 'Credenciais inválidas'
+          message: data.message || 'Erro ao fazer login'
         };
       }
     } catch (error) {
       console.error("Login error:", error);
+      
+      if (error instanceof FirebaseError) {
+        let message = 'Erro ao fazer login';
+        if (error.code === 'auth/user-not-found') {
+          message = 'E-mail não encontrado';
+        } else if (error.code === 'auth/wrong-password') {
+          message = 'Senha incorreta';
+        } else if (error.code === 'auth/invalid-email') {
+          message = 'E-mail inválido';
+        }
+        return { success: false, message };
+      }
+      
       return { 
         success: false, 
         message: 'Erro ao tentar fazer login'
@@ -94,8 +146,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Logout function
   const logout = async () => {
     try {
-      await apiRequest('POST', '/api/auth/logout', {});
+      await firebaseSignOut();
       setUser(null);
+      setFirebaseUser(null);
+      
+      // Optionally notify server
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     } catch (error) {
       console.error("Logout error:", error);
       toast({
@@ -109,8 +165,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Refresh user data
   const refreshUser = async () => {
     try {
+      if (!firebaseUser) return;
+
+      const idToken = await getIdToken(firebaseUser);
       const response = await fetch('/api/auth/me', {
-        credentials: 'include'
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -127,6 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       value={{ 
         user, 
         loading, 
+        firebaseUser,
         login, 
         logout,
         refreshUser

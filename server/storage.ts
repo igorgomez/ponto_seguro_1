@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { users, workSchedules, timeRecords, type User, type InsertUser, type WorkSchedule, type InsertWorkSchedule, type TimeRecord, type InsertTimeRecord } from "@shared/schema";
+import FirestoreStorage from './firebaseStorage';
 
 // Modify the interface with any CRUD methods
 // you might need
@@ -10,6 +11,8 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByCPF(cpf: string): Promise<User | undefined>;
+  getUserByEmail?(email: string): Promise<User | undefined>;
+  getUserByFirebaseUid?(firebaseUid: string): Promise<User | undefined>;
   getAdminUser(): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<void>;
@@ -168,6 +171,26 @@ export class PostgresStorage implements IStorage {
       carga_horaria: users.carga_horaria,
       tipo_contrato: users.tipo_contrato
     }).from(users).where(eq(users.cpf, cpf));
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select({
+      id: users.id,
+      cpf: users.cpf,
+      nome: users.nome,
+      senha: users.senha,
+      tipo: users.tipo,
+      ativo: users.ativo,
+      email: users.email,
+      telefone: users.telefone,
+      primeiro_acesso: users.primeiro_acesso,
+      created_at: users.created_at,
+      data_nascimento: users.data_nascimento,
+      data_inicio: users.data_inicio,
+      carga_horaria: users.carga_horaria,
+      tipo_contrato: users.tipo_contrato
+    }).from(users).where(eq(users.email, email));
     return result[0];
   }
 
@@ -624,5 +647,6 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Criamos uma instância da classe PostgresStorage
-export const storage = new PostgresStorage();
+// Por padrão usamos Firestore como storage (substitui Postgres)
+// Ainda mantemos as outras implementações no arquivo para referência
+export const storage = new FirestoreStorage();

@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: check if user is logged in
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    // Helper function: check if current user is an admin
+    function isAdmin() {
+      return isAuth() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tipo == 'admin';
+    }
+    
+    // Helper function: check if current user owns the document
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    // - Admins can read and write
+    // - Users can only read their own document
+    match /users/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+    
+    // Work schedules
+    // - Authenticated users can read
+    // - Only admins can write
+    match /workSchedules/{scheduleId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+    }
+    
+    // Time records
+    // - Authenticated users can read
+    // - Users can create/update their own time records
+    // - Admins can write any record
+    match /timeRecords/{recordId} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isAuth();
+      allow create: if isAuth();
+    }
+    
+    // Fallback: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
