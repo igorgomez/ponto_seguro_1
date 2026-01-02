@@ -3,41 +3,69 @@ import fs from 'fs';
 import path from 'path';
 
 export { admin };
-export const Timestamp = admin.firestore.Timestamp;
+
+let firebaseApp: admin.app.App | undefined;
 
 /**
- * Inicializa o Firebase Admin SDK
- * Requer SERVICE_ACCOUNT_KEY como JSON string em variável de ambiente
+ * Inicializa o Firebase Admin SDK com várias opções de configuração:
+ * - SERVICE_ACCOUNT_KEY: JSON compact string (used first)
+ * - SERVICE_ACCOUNT_PATH: path to service account JSON file
+ * - GOOGLE_APPLICATION_CREDENTIALS: path to ADC JSON file (will fall back to ADC)
+ * - If none provided, attempts Application Default Credentials (ADC)
  */
-
-let firebaseApp: admin.app.App;
-
 export const initializeFirebase = () => {
-  if (firebaseApp) {
-    return firebaseApp;
-  }
+  if (firebaseApp) return firebaseApp;
 
   try {
+    // 1) SERVICE_ACCOUNT_KEY (JSON string)
     const serviceAccountKey = process.env.SERVICE_ACCOUNT_KEY;
-
-    if (!serviceAccountKey) {
-      throw new Error(
-        'SERVICE_ACCOUNT_KEY not found in environment variables. ' +
-        'Set it with your Firebase service account JSON content.'
-      );
+    if (serviceAccountKey) {
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      firebaseApp = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+      });
+      console.log('Firebase Admin SDK initialized using SERVICE_ACCOUNT_KEY');
+      return firebaseApp;
     }
 
-    const serviceAccount = JSON.parse(serviceAccountKey);
+    // 2) SERVICE_ACCOUNT_PATH (file path to JSON)
+    const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH;
+    if (serviceAccountPath) {
+      const absPath = path.isAbsolute(serviceAccountPath)
+        ? serviceAccountPath
+        : path.resolve(process.cwd(), serviceAccountPath);
+      if (!fs.existsSync(absPath)) {
+        throw new Error(`SERVICE_ACCOUNT_PATH file not found: ${absPath}`);
+      }
+      const serviceAccount = JSON.parse(fs.readFileSync(absPath, 'utf8'));
+      firebaseApp = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+      });
+      console.log('Firebase Admin SDK initialized using SERVICE_ACCOUNT_PATH');
+      return firebaseApp;
+    }
 
-    firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
-    });
+    // 3) GOOGLE_APPLICATION_CREDENTIALS or ADC
+    const adcPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (adcPath && fs.existsSync(adcPath)) {
+      // Let ADC handle credentials, but initialize app
+      firebaseApp = admin.initializeApp();
+      console.log('Firebase Admin SDK initialized using GOOGLE_APPLICATION_CREDENTIALS (ADC)');
+      return firebaseApp;
+    }
 
-    console.log('Firebase Admin SDK initialized successfully');
+    // 4) Fallback to Application Default Credentials (environment provided by cloud)
+    firebaseApp = admin.initializeApp();
+    console.log('Firebase Admin SDK initialized using Application Default Credentials (ADC)');
     return firebaseApp;
   } catch (error) {
     console.error('Failed to initialize Firebase Admin SDK:', error);
+    // Provide actionable error message for local dev
+    if (!process.env.SERVICE_ACCOUNT_KEY && !process.env.SERVICE_ACCOUNT_PATH && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      console.error('No service account provided. For local development, set SERVICE_ACCOUNT_KEY or SERVICE_ACCOUNT_PATH, or set GOOGLE_APPLICATION_CREDENTIALS to a service account JSON file.');
+    }
     throw error;
   }
 };
